@@ -7,7 +7,17 @@ import (
 
 const INPUT_PATH = "05_supplystacks/input.txt"
 
-func Rearrange() {
+type RearrangeStrategy func([]CrateStack, string)
+
+func Rearrange() string {
+	return rearrange(executeRearrangementOneByOne)
+}
+
+func RearrangePreserveOrder() string {
+	return rearrange(executeRearrangementPreservingOrder)
+}
+
+func rearrange(rearrangeStrategy RearrangeStrategy) string {
 	stacksDrawingSection := true
 	stacksDrawing := []string{}
 	stacks := []CrateStack{}
@@ -15,16 +25,18 @@ func Rearrange() {
 		if line == "" {
 			stacks = createStacksFromDrawing(stacksDrawing)
 			stacksDrawingSection = false
-			continue
-		}
-
-		if !stacksDrawingSection {
+		} else if stacksDrawingSection {
 			stacksDrawing = append(stacksDrawing, line)
 		} else {
-			executeRearrangement(stacks, line)
+			rearrangeStrategy(stacks, line)
 		}
 	}
 
+	result := ""
+	for _, stack := range stacks {
+		result += stack.lastElement()
+	}
+	return result
 }
 
 func createStacksFromDrawing(drawing []string) []CrateStack {
@@ -51,8 +63,4 @@ func createStacksFromDrawing(drawing []string) []CrateStack {
 		}
 	}
 	return stacks[:]
-}
-
-func executeRearrangement(stacks []CrateStack, rearrangementString string) {
-	splitted := strings.Split(strings.Split(rearrangementString, "move ")[1], " from ")
 }
