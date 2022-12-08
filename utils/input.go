@@ -5,6 +5,13 @@ import (
 	"os"
 )
 
+func GetFirstInputLine(input_path string) string {
+	for line := range GetInputLines(input_path) {
+		return line
+	}
+	return ""
+}
+
 func GetInputLines(input_path string) chan string {
 	c := make(chan string)
 
