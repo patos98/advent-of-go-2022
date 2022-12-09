@@ -48,9 +48,9 @@ func parseTreeAndDirs() (*Dir, []*Dir) {
 	tree.subDirs["/"] = newDir(tree)
 	currentDir := tree
 
-	for line := range utils.GetInputLines(INPUT_PATH) {
+	utils.ProcessInputLines(INPUT_PATH, func(line string) {
 		if strings.HasPrefix(line, "$ ls") {
-			continue
+			return
 		}
 
 		if strings.HasPrefix(line, "$ cd") {
@@ -63,7 +63,7 @@ func parseTreeAndDirs() (*Dir, []*Dir) {
 		} else {
 			currentDir.files = append(currentDir.files, parseFile(line))
 		}
-	}
+	})
 
 	return tree, dirs
 }
