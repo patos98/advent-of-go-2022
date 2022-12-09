@@ -54,26 +54,21 @@ func parseTreeAndDirs() (*Dir, []*Dir) {
 		}
 
 		if strings.HasPrefix(line, "$ cd") {
-			currentDir = getCurrentDir(line, currentDir)
+			currentDir = parseNextDir(line, currentDir)
 		} else if strings.HasPrefix(line, "dir") {
 			dirname := strings.Split(line, "dir ")[1]
 			dir := newDir(currentDir)
 			dirs = append(dirs, dir)
 			currentDir.subDirs[dirname] = dir
 		} else {
-			split := strings.Split(line, " ")
-			size, _ := strconv.Atoi(split[0])
-			currentDir.files = append(currentDir.files, &File{
-				name: split[1],
-				size: size,
-			})
+			currentDir.files = append(currentDir.files, parseFile(line))
 		}
 	}
 
 	return tree, dirs
 }
 
-func getCurrentDir(line string, currentDir *Dir) *Dir {
+func parseNextDir(line string, currentDir *Dir) *Dir {
 	targetDir := strings.Split(line, "$ cd ")[1]
 	if targetDir == ".." {
 		return currentDir.parent
@@ -82,7 +77,7 @@ func getCurrentDir(line string, currentDir *Dir) *Dir {
 	}
 }
 
-func getFile(line string) *File {
+func parseFile(line string) *File {
 	split := strings.Split(line, " ")
 	size, _ := strconv.Atoi(split[0])
 	return &File{
