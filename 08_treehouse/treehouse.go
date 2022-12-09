@@ -9,30 +9,8 @@ import (
 
 const INPUT_PATH = "08_treehouse/input.txt"
 
-type Visibility struct {
-	count     int
-	maxHeight int
-}
-
-func (v *Visibility) next(nextHeight int) bool {
-	if nextHeight > v.maxHeight {
-		v.maxHeight = nextHeight
-		return true
-	}
-	return false
-}
-
-func newVisibility() Visibility {
-	return Visibility{
-		count:     0,
-		maxHeight: -1,
-	}
-}
-
 func GetVisibleTreesFromOutside() int {
-	grid := utils.GetAllInputLines(INPUT_PATH)
-	height := len(grid)
-	width := len(grid[0])
+	grid, height, width := getGrid()
 
 	top := []Visibility{}
 	bottom := []Visibility{}
@@ -49,8 +27,8 @@ func GetVisibleTreesFromOutside() int {
 		left = append(left, newVisibility())
 		right = append(right, newVisibility())
 		for col := 0; col < width; col++ {
-			topLeftNext, _ := strconv.Atoi(string(grid[row][col]))
-			bottomRightNext, _ := strconv.Atoi(string(grid[height-row-1][width-col-1]))
+			topLeftNext := grid[row][col]
+			bottomRightNext := grid[height-row-1][width-col-1]
 
 			visibleFromTop := top[col].next(topLeftNext)
 			visibleFromLeft := left[row].next(topLeftNext)
@@ -74,4 +52,36 @@ func GetVisibleTreesFromOutside() int {
 	sort.Strings(visibleIndexSlice)
 
 	return len(visibleIndexes)
+}
+
+func GetTreeWithMaxScenicScore() int {
+	grid, height, width := getGrid()
+	maxScenicScore := 0
+	for row := 0; row < height; row++ {
+		for col := 0; col < width; col++ {
+			scenicScore := getScenicScore(grid, height, width, row, col)
+			if scenicScore > maxScenicScore {
+				maxScenicScore = scenicScore
+			}
+		}
+	}
+	return maxScenicScore
+}
+
+func getGrid() ([][]int, int, int) {
+	lines := utils.GetAllInputLines(INPUT_PATH)
+	height := len(lines)
+	width := len(lines[0])
+
+	grid := [][]int{}
+	for row := 0; row < height; row++ {
+		gridRow := []int{}
+		for col := 0; col < width; col++ {
+			treeHeight, _ := strconv.Atoi(string(lines[row][col]))
+			gridRow = append(gridRow, treeHeight)
+		}
+		grid = append(grid, gridRow)
+	}
+
+	return grid, height, width
 }
