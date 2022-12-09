@@ -5,26 +5,36 @@ import (
 )
 
 const INPUT_PATH = "09_ropebridge/input.txt"
+const TEST_INPUT_PATH = "09_ropebridge/input_test.txt"
 
 type PositionUpdateRule func(Position, int) Position
 type Rules map[string]PositionUpdateRule
 
-func RopeBridge() {
+func SimulateSimpleRope() int {
+	return simulateRope(newSimpleRope())
+}
+
+func SimulateSuperRope() int {
+	return simulateRope(newSuperRope(9))
+}
+
+func simulateRope(rope Rope) int {
 	var rules = Rules{
-		"U": func(p Position, amount int) Position { return Position{x: p.x, y: p.y - amount} },
-		"D": func(p Position, amount int) Position { return Position{x: p.x, y: p.y + amount} },
+		"U": func(p Position, amount int) Position { return Position{x: p.x, y: p.y + amount} },
+		"D": func(p Position, amount int) Position { return Position{x: p.x, y: p.y - amount} },
 		"L": func(p Position, amount int) Position { return Position{x: p.x - amount, y: p.y} },
 		"R": func(p Position, amount int) Position { return Position{x: p.x + amount, y: p.y} },
 	}
 
-	rope := newRope()
+	visitedPositions := map[string]struct{}{}
 	utils.ProcessInputLines(INPUT_PATH, func(line string) {
-		executeStep(rules, rope, parseStep(line))
+		step := parseStep(line)
+		for i := 0; i < step.amount; i++ {
+			rope.moveHead(rules, step)
+			rope.moveTail()
+			visitedPositions[rope.getTail()] = struct{}{}
+		}
 	})
-}
 
-func executeStep(rules Rules, rope *Rope, step Step) {
-	for i := 0; i < step.amount; i++ {
-
-	}
+	return len(visitedPositions)
 }
