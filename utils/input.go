@@ -25,6 +25,12 @@ func GetInputLines(input_path string) chan string {
 	return c
 }
 
+func GetAllInputLines(input_path string) []string {
+	lines := []string{}
+	ProcessInputLines(input_path, func(line string) { lines = append(lines, line) })
+	return lines
+}
+
 type InputLineProcessor func(string)
 
 func ProcessInputLines(input_path string, lp InputLineProcessor) {
