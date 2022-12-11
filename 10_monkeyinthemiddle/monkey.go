@@ -98,3 +98,52 @@ func getMonkeysManually() []*Monkey {
 		},
 	}
 }
+
+func getTestMonkeys() []*Monkey {
+	return []*Monkey{
+		{
+			StartingItems: []int{79, 98},
+			Operation:     func(old int) int { return old * 19 },
+			Test: func(i int) int {
+				if i%23 == 0 {
+					return 2
+				} else {
+					return 3
+				}
+			},
+		},
+		{
+			StartingItems: []int{54, 65, 75, 74},
+			Operation:     func(old int) int { return old + 6 },
+			Test: func(i int) int {
+				if i%19 == 0 {
+					return 2
+				} else {
+					return 0
+				}
+			},
+		},
+		{
+			StartingItems: []int{79, 60, 97},
+			Operation:     func(old int) int { return old * old },
+			Test: func(i int) int {
+				if i%13 == 0 {
+					return 1
+				} else {
+					return 3
+				}
+			},
+		},
+		{
+			StartingItems: []int{74},
+			Operation:     func(old int) int { return old + 3 },
+			Test: func(i int) int {
+				if i%17 == 0 {
+					return 0
+				} else {
+					return 1
+				}
+			},
+		},
+	}
+}
