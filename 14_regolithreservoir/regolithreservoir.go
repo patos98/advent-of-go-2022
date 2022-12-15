@@ -1,93 +1,83 @@
 package regolithreservoir
 
-import (
-	"aoc-2022-go/utils"
-	"fmt"
-	"math"
-	"strconv"
-	"strings"
-)
-
 const INPUT_PATH = "14_regolithreservoir/input.txt"
 const TEST_INPUT_PATH = "14_regolithreservoir/input_test.txt"
-
-type Position struct {
-	x int
-	y int
-}
-
-func (p Position) toString() string {
-	return fmt.Sprintf("%03d%03d", p.x, p.y)
-}
-
-func parsePosition(s string) Position {
-	coordinates := strings.Split(s, ",")
-	x, _ := strconv.Atoi(coordinates[0])
-	y, _ := strconv.Atoi(coordinates[1])
-	return Position{
-		x: x,
-		y: y,
-	}
-}
-
-type Rock struct {
-	position Position
-}
+const RESULT_FILE_PATH_1 = "14_regolithreservoir/result_part1.txt"
+const RESULT_FILE_PATH_2 = "14_regolithreservoir/result_part2.txt"
 
 func GetNumberOfRestingSandUnits() int {
-	rocks := []Rock{}
-	rockPositions := map[string]struct{}{}
+	rockPositions := parseRockPositions(INPUT_PATH)
+	lowestLevel := getLowestLevel(rockPositions)
+	sandCount, sandPositions, foreverFallingPositions := getSandCount(rockPositions, lowestLevel, createSimpleSand, func(sand Sand) bool { return sand.GetPosition().Y > lowestLevel })
+	printMapToFile(rockPositions, sandPositions, foreverFallingPositions, lowestLevel, false, RESULT_FILE_PATH_1)
+	return sandCount
+}
 
-	utils.ProcessInputLines(TEST_INPUT_PATH, func(line string) {
-		positions := strings.Split(line, " -> ")
-		count := len(positions)
-		for positionIndex := 0; positionIndex < count-1; positionIndex++ {
-			position1 := parsePosition(positions[positionIndex])
-			position2 := parsePosition(positions[positionIndex+1])
+func GetNumberOfRestingSandUnitsWithFloor() int {
+	rockPositions := parseRockPositions(INPUT_PATH)
+	lowestLevel := getLowestLevel(rockPositions) + 2
+	sandFactory := func() Sand { return createFloorAwareSand(lowestLevel) }
+	sandCount, sandPositions, foreverFallingPositions := getSandCount(rockPositions, lowestLevel, sandFactory, func(sand Sand) bool { return sand.GetPosition().Y == 0 })
+	printMapToFile(rockPositions, sandPositions, foreverFallingPositions, lowestLevel, true, RESULT_FILE_PATH_2)
+	return sandCount + 1 // the last sand stays on top
+}
 
-			if position1.x == position2.x {
-				difference := position2.y - position1.y
-				for i := 0; i <= difference; i++ {
-					var y int
-					if math.Signbit(float64(difference)) {
-						y = position1.y + -1*i
-					} else {
-						y = position1.y + i
+func getSandCount(rockPositions map[string]Position, lowestLevel int, sandFactory func() Sand, exitCondition func(sand Sand) bool) (int, map[string]Position, map[string]Position) {
+	sandPositions := map[string]Position{}
+	exit := false
+	foreverFallingPositions := map[string]Position{}
+
+	sandCount := -1
+	for !exit {
+		printMapToFile(rockPositions, sandPositions, foreverFallingPositions, lowestLevel, true, RESULT_FILE_PATH_2)
+
+		sandCount++
+		sand := sandFactory()
+		sandPath := []Position{}
+		for {
+			sandPath = append(sandPath, sand.GetPosition())
+			previousPosition := sand.GetPosition()
+			sand.Fall(mergePosititonMaps(rockPositions, sandPositions))
+			if sand.GetPosition().ToString() == previousPosition.ToString() && !exitCondition(sand) {
+				sandPositions[sand.GetPosition().ToString()] = sand.GetPosition()
+				break
+			}
+			if exitCondition(sand) {
+				exit = true
+				if len(sandPath) > 1 {
+					for _, position := range sandPath {
+						foreverFallingPositions[position.ToString()] = position
 					}
-
-					rock := Rock{
-						position: Position{
-							x: position1.x,
-							y: y,
-						},
-					}
-
-					rocks = append(rocks, rock)
-					rockPositions[rock.position.toString()] = struct{}{}
+				} else {
+					sandPositions[sand.GetPosition().ToString()] = sand.GetPosition()
 				}
-			} else {
-				difference := position2.x - position1.x
-				for i := 0; i <= difference; i++ {
-					var x int
-					if math.Signbit(float64(difference)) {
-						x = position1.x + -1*i
-					} else {
-						x = position1.x + i
-					}
-
-					rock := Rock{
-						position: Position{
-							x: x,
-							y: position1.y,
-						},
-					}
-
-					rocks = append(rocks, rock)
-					rockPositions[rock.position.toString()] = struct{}{}
-				}
+				break
 			}
 		}
-	})
+	}
 
-	return 0
+	return sandCount, sandPositions, foreverFallingPositions
+}
+
+func getLowestLevel(rockPositions map[string]Position) int {
+	lowest := 0
+	for _, position := range rockPositions {
+		if position.Y > lowest {
+			lowest = position.Y
+		}
+	}
+
+	return lowest
+}
+
+func mergePosititonMaps(rockPositions map[string]Position, sandPositions map[string]Position) map[string]Position {
+	mergedPositions := map[string]Position{}
+	for key, value := range rockPositions {
+		mergedPositions[key] = value
+	}
+	for key, value := range sandPositions {
+		mergedPositions[key] = value
+	}
+
+	return mergedPositions
 }
