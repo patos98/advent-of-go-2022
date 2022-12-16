@@ -7,15 +7,16 @@ const RESULT_FILE_PATH_2 = "14_regolithreservoir/result_part2.txt"
 
 func GetNumberOfRestingSandUnits() int {
 	rockPositions := parseRockPositions(INPUT_PATH)
-	lowestLevel := getLowestLevel(rockPositions)
+	lowestLevel, _ := getLowestAndRightMostPoint(rockPositions)
 	sandCount, sandPositions, foreverFallingPositions := getSandCount(rockPositions, lowestLevel, createSimpleSand, func(sand Sand) bool { return sand.GetPosition().Y > lowestLevel })
 	printMapToFile(rockPositions, sandPositions, foreverFallingPositions, lowestLevel, false, RESULT_FILE_PATH_1)
 	return sandCount
 }
 
 func GetNumberOfRestingSandUnitsWithFloor() int {
-	rockPositions := parseRockPositions(INPUT_PATH)
-	lowestLevel := getLowestLevel(rockPositions) + 2
+	rockPositions := parseRockPositions(TEST_INPUT_PATH)
+	lowestLevel, _ := getLowestAndRightMostPoint(rockPositions)
+	lowestLevel += 2
 	sandFactory := func() Sand { return createFloorAwareSand(lowestLevel) }
 	sandCount, sandPositions, foreverFallingPositions := getSandCount(rockPositions, lowestLevel, sandFactory, func(sand Sand) bool { return sand.GetPosition().Y == 0 })
 	printMapToFile(rockPositions, sandPositions, foreverFallingPositions, lowestLevel, true, RESULT_FILE_PATH_2)
@@ -59,15 +60,19 @@ func getSandCount(rockPositions map[string]Position, lowestLevel int, sandFactor
 	return sandCount, sandPositions, foreverFallingPositions
 }
 
-func getLowestLevel(rockPositions map[string]Position) int {
+func getLowestAndRightMostPoint(rockPositions map[string]Position) (int, int) {
 	lowest := 0
+	rightMost := 0
 	for _, position := range rockPositions {
 		if position.Y > lowest {
 			lowest = position.Y
 		}
+		if position.X > rightMost {
+			rightMost = position.X
+		}
 	}
 
-	return lowest
+	return lowest, rightMost
 }
 
 func mergePosititonMaps(rockPositions map[string]Position, sandPositions map[string]Position) map[string]Position {
