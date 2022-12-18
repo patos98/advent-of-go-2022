@@ -14,7 +14,7 @@ func GetNumberOfRestingSandUnits() int {
 }
 
 func GetNumberOfRestingSandUnitsWithFloor() int {
-	rockPositions := parseRockPositions(TEST_INPUT_PATH)
+	rockPositions := parseRockPositions(INPUT_PATH)
 	lowestLevel, _ := getLowestAndRightMostPoint(rockPositions)
 	lowestLevel += 2
 	sandFactory := func() Sand { return createFloorAwareSand(lowestLevel) }
@@ -28,32 +28,39 @@ func getSandCount(rockPositions map[string]Position, lowestLevel int, sandFactor
 	exit := false
 	foreverFallingPositions := map[string]Position{}
 
-	sandCount := -1
-	for !exit {
-		printMapToFile(rockPositions, sandPositions, foreverFallingPositions, lowestLevel, true, RESULT_FILE_PATH_2)
+	clearConsole()
+	printMapToConsole(rockPositions, sandPositions, foreverFallingPositions, lowestLevel, true)
 
-		sandCount++
-		sand := sandFactory()
-		sandPath := []Position{}
-		for {
-			sandPath = append(sandPath, sand.GetPosition())
+	sandCount := 0
+	sands := []Sand{}
+	sandPaths := [][]Position{}
+	for !exit {
+
+		sands = append(sands, sandFactory())
+		sandPaths = append(sandPaths, []Position{})
+		solidPositions := mergePosititonMaps(rockPositions, sandPositions)
+		for i, sand := range sands {
 			previousPosition := sand.GetPosition()
-			sand.Fall(mergePosititonMaps(rockPositions, sandPositions))
+			sandPaths[i] = append(sandPaths[i], previousPosition)
+			sand.Fall(solidPositions)
+			solidPositions[sand.GetPosition().ToString()] = sand.GetPosition()
 			if sand.GetPosition().ToString() == previousPosition.ToString() && !exitCondition(sand) {
 				sandPositions[sand.GetPosition().ToString()] = sand.GetPosition()
-				break
+				sands = sands[1:]
+				sandCount++
+				printSandToConsole(sand.GetPosition(), lowestLevel)
 			}
-			if exitCondition(sand) {
-				exit = true
-				if len(sandPath) > 1 {
-					for _, position := range sandPath {
-						foreverFallingPositions[position.ToString()] = position
-					}
-				} else {
-					sandPositions[sand.GetPosition().ToString()] = sand.GetPosition()
+		}
+		if exitCondition(sands[0]) {
+			exit = true
+			if len(sandPaths[0]) > 2 {
+				for _, position := range sandPaths[0] {
+					foreverFallingPositions[position.ToString()] = position
 				}
-				break
+			} else {
+				sandPositions[sands[0].GetPosition().ToString()] = sands[0].GetPosition()
 			}
+			break
 		}
 	}
 

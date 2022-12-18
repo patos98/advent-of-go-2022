@@ -3,13 +3,44 @@ package regolithreservoir
 import (
 	"fmt"
 	"io/ioutil"
+	"time"
+
+	tm "github.com/buger/goterm"
 )
 
-type CharPrinter func(s string)
+type CharPrinter func(p Position, s string)
 type NewLinePrinter func()
 
+func clearConsole() {
+	tm.Clear()
+	tm.Flush()
+}
+
+func printSandToConsole(sandPosition Position, lowestLevel int) {
+	time.Sleep(10 * time.Millisecond)
+	x, y := tm.GetXY(sandPosition.X, sandPosition.Y)
+	tm.MoveCursor(x/2, y)
+	tm.Flush()
+	fmt.Print("O")
+}
+
+func printCharToConsole(p Position, character string) {
+	x, y := tm.GetXY(p.X, p.Y)
+	tm.MoveCursor(x/2, y)
+	tm.Flush()
+	fmt.Print(character)
+}
+
 func printMapToConsole(rockPositions map[string]Position, sandPositions map[string]Position, foreverFallingPositions map[string]Position, maxY int, hasFloor bool) {
-	printMap(rockPositions, sandPositions, foreverFallingPositions, maxY, hasFloor, func(s string) { fmt.Print(s) }, func() { fmt.Println() })
+	printMap(
+		rockPositions,
+		sandPositions,
+		foreverFallingPositions,
+		maxY,
+		hasFloor,
+		printCharToConsole,
+		func() { fmt.Println() },
+	)
 }
 
 func printMapToFile(rockPositions map[string]Position, sandPositions map[string]Position, foreverFallingPositions map[string]Position, maxY int, hasFloor bool, filePath string) {
@@ -20,7 +51,7 @@ func printMapToFile(rockPositions map[string]Position, sandPositions map[string]
 		foreverFallingPositions,
 		maxY,
 		hasFloor,
-		func(s string) {
+		func(p Position, s string) {
 			content += s
 		},
 		func() {
@@ -48,21 +79,21 @@ func printMap(rockPositions map[string]Position, sandPositions map[string]Positi
 
 	for y := 0; y <= maxY; y++ {
 		for x := minX - 1; x <= maxX+1; x++ {
-			charPrinter(" ")
 			position := Position{
 				X: x,
 				Y: y,
 			}
+			charPrinter(position, " ")
 			if _, contains := rockPositions[position.ToString()]; contains {
-				charPrinter("#")
+				charPrinter(position, "#")
 			} else if _, contains := sandPositions[position.ToString()]; contains {
-				charPrinter("O")
+				charPrinter(position, "O")
 			} else if _, contains := foreverFallingPositions[position.ToString()]; contains {
-				charPrinter("~")
+				charPrinter(position, "~")
 			} else if hasFloor && y == maxY {
-				charPrinter("#")
+				charPrinter(position, "#")
 			} else {
-				charPrinter(".")
+				charPrinter(position, " ")
 			}
 		}
 		newLinePrinter()
