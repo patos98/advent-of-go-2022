@@ -2,52 +2,15 @@ package beacon
 
 import (
 	"aoc-2022-go/utils"
-	"fmt"
 	"math"
-	"strconv"
-	"strings"
 )
 
 const INPUT_PATH = "15_beacon/input.txt"
 const TEST_INPUT_PATH = "15_beacon/input_test.txt"
 
-type Position struct {
-	x int
-	y int
-}
-
-func (p Position) ToString() string {
-	return fmt.Sprintf("%d;%d", p.x, p.y)
-}
-
-type Sensor struct {
-	self          Position
-	closestBeacon Position
-	distance      int
-}
-
 func GetNumberOfNonBeaconPositionInRow(inputPath string, y int) int {
 	distanceCalculator := manhattanDistance
-	sensors := []Sensor{}
-	beaconPositions := map[string]struct{}{}
-
-	minX := 0
-	maxX := 0
-	utils.ProcessInputLines(inputPath, func(line string) {
-		sensor := parseSensor(line, distanceCalculator)
-		sensors = append(sensors, sensor)
-		beaconPositions[sensor.closestBeacon.ToString()] = struct{}{}
-
-		sensorMinX := sensor.self.x - sensor.distance
-		if sensorMinX < minX {
-			minX = sensorMinX
-		}
-
-		sensorMaxX := sensor.self.x + sensor.distance
-		if sensorMaxX > maxX {
-			maxX = sensorMaxX
-		}
-	})
+	sensors, beaconPositions, minX, maxX := getSensorsAndXLimitsFromFile(inputPath, distanceCalculator)
 
 	nonBeaconPositions := 0
 	for x := minX; x <= maxX; x++ {
@@ -64,27 +27,61 @@ func GetNumberOfNonBeaconPositionInRow(inputPath string, y int) int {
 	return nonBeaconPositions
 }
 
-type DistanceCalculator func(Position, Position) int
-
-func parseSensor(line string, dc DistanceCalculator) Sensor {
-	split := strings.Split(strings.Split(line, "Sensor at x=")[1], ": closest beacon is at x=")
-	self := parsePosition(split[0])
-	closestBeacon := parsePosition(split[1])
-	return Sensor{
-		self:          self,
-		closestBeacon: closestBeacon,
-		distance:      dc(self, closestBeacon),
-	}
+type Range struct {
+	min int
+	max int
 }
 
-func parsePosition(positionString string) Position {
-	positionStrings := strings.Split(positionString, ", y=")
-	x, _ := strconv.Atoi(positionStrings[0])
-	y, _ := strconv.Atoi(positionStrings[1])
-	return Position{
-		x: x,
-		y: y,
+func GetDistressBeaconFrequency(inputPath string, coordinatesMin int, coordinatesMax int) int {
+	distanceCalculator := manhattanDistance
+	sensors, _, _, _ := getSensorsAndXLimitsFromFile(inputPath, distanceCalculator)
+
+	stopInit := utils.Timer("init")
+	possibleBeaconX := map[int][]Range{}
+	for i := coordinatesMin; i <= coordinatesMax; i++ {
+		possibleBeaconX[i] = []Range{}
 	}
+	stopInit()
+
+	stopSensors := utils.Timer("sensors")
+	for _, sensor := range sensors {
+		stopSingleSensor := utils.Timer("single sensor")
+		distanceX := sensor.distance
+		for i := -distanceX; i <= distanceX; i++ {
+			x := sensor.self.x + i
+			if x < coordinatesMin || x > coordinatesMax {
+				continue
+			}
+
+			distanceY := distanceX - int(math.Abs(float64(i)))
+			minY := sensor.self.y - distanceY
+			maxY := sensor.self.y + distanceY
+
+			possibleBeaconX[x] = utils.InsertIntoSortedSlice(possibleBeaconX[x], Range{
+				min: minY,
+				max: maxY,
+			}, Range{}, func(itemInSlice Range, itemToInsert Range) bool {
+				return itemInSlice.min > itemToInsert.min
+			})
+		}
+		stopSingleSensor()
+	}
+	stopSensors()
+
+	defer utils.Timer("finding distress beacon")()
+	for x, yRanges := range possibleBeaconX {
+		maxY := yRanges[0].max
+		for _, yRange := range yRanges {
+			if yRange.min > maxY+1 {
+				return 4000000*x + maxY + 1
+			}
+			if yRange.max > maxY {
+				maxY = yRange.max
+			}
+		}
+	}
+
+	return 0
 }
 
 func manhattanDistance(p1 Position, p2 Position) int {

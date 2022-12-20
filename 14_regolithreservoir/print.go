@@ -3,7 +3,6 @@ package regolithreservoir
 import (
 	"fmt"
 	"io/ioutil"
-	"time"
 
 	tm "github.com/buger/goterm"
 )
@@ -17,7 +16,6 @@ func clearConsole() {
 }
 
 func printSandToConsole(sandPosition Position, lowestLevel int) {
-	time.Sleep(10 * time.Millisecond)
 	x, y := tm.GetXY(sandPosition.X, sandPosition.Y)
 	tm.MoveCursor(x/2, y)
 	tm.Flush()
