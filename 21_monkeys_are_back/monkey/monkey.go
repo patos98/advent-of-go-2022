@@ -2,5 +2,8 @@ package monkey
 
 type Monkey interface {
 	GetName() string
-	GetNumber(monkeys map[string]Monkey) int
+	GetMonkeyLeft() string
+	GetMonkeyRight() string
+	GetNumber(monkeys map[string]Monkey) (int, bool)
+	GetMissingNumberForResult(map[string]Monkey, int) int
 }
