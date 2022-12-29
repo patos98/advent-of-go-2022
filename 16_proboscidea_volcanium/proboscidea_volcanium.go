@@ -8,6 +8,8 @@ import (
 const INPUT_PATH = "16_proboscidea_volcanium/input.txt"
 const TEST_INPUT_PATH = "16_proboscidea_volcanium/input_test.txt"
 
+const MINUTES_TO_OPEN_A_VALVE = 1
+
 type Valve interface {
 	GetName() string
 	GetFlowRate() int
@@ -15,87 +17,90 @@ type Valve interface {
 }
 
 type Path struct {
-	currentValve     string
-	visitedValves    map[string]struct{}
-	openValves       map[string]struct{}
-	releasedPressure int
+	currentValve         string
+	visitedValves        map[string]struct{}
+	visitedValvesInOrder []string
+	releasedPressure     int
+	remainingMinutes     int
 }
 
 func GetMostReleasablePressure(inputPath string) int {
 	valves := parseValves(inputPath)
-	paths := []Path{{
-		currentValve:     "AA",
-		visitedValves:    map[string]struct{}{},
-		openValves:       map[string]struct{}{},
-		releasedPressure: 0,
-	}}
+	distanceTable := getDistanceTable(valves)
+	paths := map[string]Path{
+		"AA": {
+			currentValve:         "AA",
+			visitedValves:        map[string]struct{}{"AA": {}},
+			visitedValvesInOrder: []string{},
+			releasedPressure:     0,
+			remainingMinutes:     30,
+		},
+	}
 
-	remainingMinutes := 30
-	maxReleasedPressureAtValves := map[string]int{}
+	for {
+		newPaths := map[string]Path{}
+		finalPaths := map[string]Path{}
+		for previousValves, path := range paths {
+			pathContinues := false
+			for targetValve, distance := range distanceTable[path.currentValve] {
+				if utils.MapContains(path.visitedValves, targetValve) {
+					continue
+				}
 
-	for remainingMinutes > 0 {
-		remainingMinutes--
-		newPaths := []Path{}
+				remainingMinutes := path.remainingMinutes - distance - MINUTES_TO_OPEN_A_VALVE
+				if remainingMinutes < 0 {
+					continue
+				}
 
-		for _, path := range paths {
-			currentValve := valves[path.currentValve]
+				additionalReleasedPressure := valves[targetValve].GetFlowRate() * remainingMinutes
+				if additionalReleasedPressure == 0 {
+					continue
+				}
 
-			// add next possible valves to path
-			for _, nextValve := range currentValve.GetReachableValves() {
+				pathContinues = true
+
 				visitedValves := utils.CopyMap(path.visitedValves, map[string]struct{}{})
+				visitedValves[targetValve] = struct{}{}
+				releasedPressure := path.releasedPressure + additionalReleasedPressure
 
-				if !utils.MapContains(visitedValves, nextValve) {
-					visitedValves[nextValve] = struct{}{}
+				newPath := Path{
+					currentValve:         targetValve,
+					visitedValves:        visitedValves,
+					visitedValvesInOrder: append(path.visitedValvesInOrder, targetValve),
+					releasedPressure:     releasedPressure,
+					remainingMinutes:     remainingMinutes,
+				}
 
-					if !utils.MapContains(maxReleasedPressureAtValves, nextValve) ||
-						path.releasedPressure > maxReleasedPressureAtValves[nextValve] {
-						maxReleasedPressureAtValves[nextValve] = path.releasedPressure
-
-						newPaths = append(newPaths, Path{
-							currentValve:     nextValve,
-							visitedValves:    visitedValves,
-							openValves:       utils.CopyMap(path.openValves, map[string]struct{}{}),
-							releasedPressure: path.releasedPressure,
-						})
-					}
-				} else {
-					newPaths = append(newPaths, Path{
-						currentValve:     nextValve,
-						visitedValves:    visitedValves,
-						openValves:       utils.CopyMap(path.openValves, map[string]struct{}{}),
-						releasedPressure: path.releasedPressure,
-					})
+				currentValves := previousValves + "," + targetValve
+				if !utils.MapContains(newPaths, currentValves) ||
+					newPath.releasedPressure > newPaths[currentValves].releasedPressure {
+					newPaths[currentValves] = newPath
 				}
 			}
 
-			// add opening current valve to path
-			if !utils.MapContains(path.openValves, path.currentValve) &&
-				valves[path.currentValve].GetFlowRate() > 0 {
-				openValves := utils.CopyMap(path.openValves, map[string]struct{}{})
-				openValves[path.currentValve] = struct{}{}
-				releasedPressure := remainingMinutes * valves[path.currentValve].GetFlowRate()
-
-				newPaths = append(newPaths, Path{
-					currentValve:     path.currentValve,
-					visitedValves:    path.visitedValves,
-					openValves:       path.openValves,
-					releasedPressure: path.releasedPressure + releasedPressure,
-				})
+			if !pathContinues {
+				finalPaths[previousValves] = path
 			}
+		}
 
+		if len(newPaths) == 0 {
+			break
 		}
 
 		paths = newPaths
-	}
-
-	maxReleasablePressure := 0
-	for _, path := range paths {
-		if path.releasedPressure > maxReleasablePressure {
-			maxReleasablePressure = path.releasedPressure
+		for k, v := range finalPaths {
+			paths[k] = v
 		}
 	}
 
-	return maxReleasablePressure
+	mostReleasablePressurePath := paths["TM"]
+	for _, path := range paths {
+		if path.releasedPressure > mostReleasablePressurePath.releasedPressure {
+			mostReleasablePressurePath = path
+		}
+	}
+
+	return mostReleasablePressurePath.releasedPressure
 }
 
 func parseValves(inputPath string) map[string]Valve {

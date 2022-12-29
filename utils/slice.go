@@ -11,3 +11,12 @@ func InsertIntoSortedSlice[T any](items []T, itemToInsert T, emptyItem T, compar
 	items[i] = itemToInsert
 	return items
 }
+
+func SliceContains[T comparable](s []T, e T) bool {
+	for _, v := range s {
+		if v == e {
+			return true
+		}
+	}
+	return false
+}
